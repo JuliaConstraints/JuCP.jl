@@ -1,0 +1,19 @@
+name = "JuCP"
+uuid = "1892fcc1-6e5e-5564-9574-4ec937d8bb9b"
+authors = ["Thibaut Cuvelier"]
+version = "0.0.1"
+
+[deps]
+MathOptInterface = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
+ConstraintProgrammingExtensions = "b65d079e-ed98-51d9-b0db-edee61a5c5f8"
+
+[compat]
+MathOptInterface = "~0.9"
+ConstraintProgrammingExtensions = "~0.0"
+julia = "^1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
