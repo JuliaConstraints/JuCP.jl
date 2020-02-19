@@ -6,10 +6,12 @@ version = "0.0.1"
 [deps]
 MathOptInterface = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
 ConstraintProgrammingExtensions = "b65d079e-ed98-51d9-b0db-edee61a5c5f8"
+JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
 
 [compat]
-MathOptInterface = "~0.9"
-ConstraintProgrammingExtensions = "~0.0"
+MathOptInterface = "^0.9"
+ConstraintProgrammingExtensions = "^0.0"
+JuMP = "^0.21"
 julia = "^1"
 
 [extras]
