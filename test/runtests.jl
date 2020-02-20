@@ -1,6 +1,8 @@
-using JuMP, JuCP
+using JuMP, JuCP, ConstraintProgrammingExtensions
 
 using Test
+
+const CP = ConstraintProgrammingExtensions
 
 @testset "JuCP" begin
     @testset "AllDifferent" begin
@@ -13,6 +15,6 @@ using Test
 
         c = JuMP.constraint_object(cref)
         @test c.func == [x, y, z]
-        @test c.set == MOI.AllDifferent(3)
+        @test c.set == CP.AllDifferent(3)
     end
 end
