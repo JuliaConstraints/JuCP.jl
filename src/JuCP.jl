@@ -10,34 +10,9 @@ const CP = ConstraintProgrammingExtensions
 # Default syntax: @constraint(m, [x, y, z] in AllDifferent(3))
 JuMP.is_one_argument_constraint(::Val{:alldifferent}) = true
 
-function JuMP.parse_one_operator_constraint(
-  errorf::Function,
-  vectorized::Bool,
-  ::Val{:alldifferent},
-  F
-)
+function JuMP.parse_one_operator_constraint(errorf::Function, vectorized::Bool,
+                                            ::Val{:alldifferent}, F)
   return JuMP.parse_one_operator_constraint(errorf, vectorized, Val(:∈), F, CP.AllDifferent(length(F.args)))
-  f, parse_code = JuMP._MA.rewrite(F)
-  println("JuCP...")
-  println((F))
-  println(typeof(F))
-  println((f))
-  println(typeof(f))
-  println()
-
-  return parse_code, quote
-    JuMP.VectorConstraint($f, CP.AllDifferent(length(F)))
-  end
-  # return parse_code, quote
-  #   $(esc(_build_alldifferent_constraint(errorf, f)))
-  # end
-end
-
-function _build_alldifferent_constraint(
-  errorf::Function,
-  F#::AbstractArray{<:AbstractJuMPScalar}
-)
-  return VectorConstraint(F, CP.AllDifferent(length(F)))
 end
 
 # Domain. The base implementation of build_constraint is enough.
