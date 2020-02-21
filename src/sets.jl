@@ -42,8 +42,24 @@ JuMP.sense_to_set(_error::Function, ::Val{:(<)}) = CP.Strictly(MOI.LessThan(0.0)
 JuMP.sense_to_set(_error::Function, ::Val{:(>)}) = CP.Strictly(MOI.GreaterThan(0.0))
 
 # Element.
-# Nice syntax:    @constraint(m, y == array[x]) TODO
+# Nicer syntax:   @constraint(m, y == array[x]) TODO
+# Nice syntax:    @constraint(m, element(y, array, x)
 # Default syntax: @constraint(m, [y, x] in Element(array, 2))
+JuMP.is_one_argument_constraint(::Val{:element}) = true
+
+function JuMP.parse_one_operator_constraint(errorf::Function, vectorized::Bool,
+                                            ::Val{:element}, F::Expr)
+println(F)
+println(F.head)
+println(F.args)
+
+  destination = F.args[1]
+  array = eval(F.args[2]) # TODO: does not work when the array is not 100% made explicit in the macro call.
+  index = F.args[3]
+  func = Expr(:vect, [destination, index])
+
+  return JuMP.parse_one_operator_constraint(errorf, vectorized, Val(:∈), F, CP.Element(array, 2))
+end
 
 # Sort.
 # Nice syntax:    @constraint(m, [y1, y2] == sort([x1, x2])) TODO
