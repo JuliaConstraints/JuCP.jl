@@ -41,6 +41,27 @@ JuMP.sense_to_set(_error::Function, ::Val{:(!=)}) = CP.DifferentFrom(0.0)
 JuMP.sense_to_set(_error::Function, ::Val{:(<)}) = CP.Strictly(MOI.LessThan(0.0))
 JuMP.sense_to_set(_error::Function, ::Val{:(>)}) = CP.Strictly(MOI.GreaterThan(0.0))
 
+# Element.
+# Nice syntax:    @constraint(m, y == array[x]) TODO
+# Default syntax: @constraint(m, [y, x] in Element(array, 2))
+
+# Sort.
+# Nice syntax:    @constraint(m, [y1, y2] == sort([x1, x2])) TODO
+# Default syntax: @constraint(m, [x1, x2, y1, y2] in Sort(2))
+
+# SortPermutation.
+# Nice syntax:    @constraint(m, [y1, y2] == sortpermutation([x1, x2])) TODO
+# Default syntax: @constraint(m, [x1, x2, z1, z2] in SortPermutation(2))
+# I.e. the sorted values are not available, and should be retrieved through Element.
+
+# BinPacking.
+# Nice syntax:    @constraint(m, [load1, load2, assigned1, assigned2] == binpacking([size1, size2])) TODO
+# Default syntax: @constraint(m, [load1, load2, assigned1, assigned2, size1, size2] in BinPacking(2, 2))
+
+# CapacitatedBinPacking.
+# Nice syntax:    @constraint(m, [load1, load2, assigned1, assigned2] == binpacking([size1, size2], [capa1, capa2])) TODO
+# Default syntax: @constraint(m, [load1, load2, assigned1, assigned2, size1, size2, capa1, capa2] in CapacitatedBinPacking(2, 2))
+
 # ReificationSet.
 
 function _build_reified_constraint(
