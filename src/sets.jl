@@ -4,11 +4,11 @@
 JuMP.is_one_argument_constraint(::Val{:alldifferent}) = true
 
 function JuMP.parse_one_operator_constraint(errorf::Function, vectorized::Bool,
-                                            ::Val{:alldifferent}, F)
+                                            ::Val{:alldifferent}, F::Expr)
   return JuMP.parse_one_operator_constraint(errorf, vectorized, Val(:∈), F, CP.AllDifferent(length(F.args)))
 end
 
-# Domain. The base implementation of build_constraint is enough.
+# Domain.
 # Default syntax: @constraint(m, x in Domain(Set(1, 2, 3)))
 # TODO: find something closer to @constraint(m, x in [1, 2]), like Membership
 # function build_constraint(_error::Function, func::AbstractJuMPScalar,
@@ -16,7 +16,7 @@ end
 #     return ScalarConstraint(func, set)
 # end
 
-# Membership. TODO: find a nice syntax.
+# Membership.
 # Default syntax: @constraint(m, [x, y, z] in Membership(3))
 # TODO: find something closer to @constraint(m, x in [y, z]), like Domain
 # function build_constraint(_error::Function, func::AbstractJuMPScalar,
