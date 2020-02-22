@@ -4,12 +4,23 @@
 JuMP.is_one_argument_constraint(::Val{:alldifferent}) = true
 
 function JuMP.parse_call_constraint(errorf::Function, ::Val{:alldifferent}, F...)
-  set = CP.AllDifferent(length(F))
-  func = Expr(:vect, F...)
+  # All variables are explicit in the call. For instance: @constraint(m, alldifferent(x, y)).
+  if length(F) > 1 && typeof(F) <: Tuple && all(p == Symbol for p in typeof(F).parameters)
+    set = CP.AllDifferent(length(F))
+    func = Expr(:vect, F...)
 
-  variable, parse_code = JuMP._MA.rewrite(func)
-  build_call = JuMP._build_call(errorf, false, variable, set)
-  return false, parse_code, build_call
+    variable, parse_code = JuMP._MA.rewrite(func)
+    build_call = JuMP._build_call(errorf, false, variable, set)
+    return false, parse_code, build_call
+  end
+
+  # The number of variables is not statically known, generate some code to get it.
+
+  println(F)
+  println(typeof(F))
+  println(length(F))
+
+  error("fuck")
 end
 
 # Domain.
