@@ -3,9 +3,13 @@
 # Default syntax: @constraint(m, [x, y, z] in AllDifferent(3))
 JuMP.is_one_argument_constraint(::Val{:alldifferent}) = true
 
-function JuMP.parse_one_operator_constraint(errorf::Function, vectorized::Bool,
-                                            ::Val{:alldifferent}, F::Expr)
-  return JuMP.parse_one_operator_constraint(errorf, vectorized, Val(:∈), F, CP.AllDifferent(length(F.args)))
+function JuMP.parse_call_constraint(errorf::Function, ::Val{:alldifferent}, F...)
+  set = CP.AllDifferent(length(F))
+  func = Expr(:vect, F...)
+
+  variable, parse_code = JuMP._MA.rewrite(func)
+  build_call = JuMP._build_call(errorf, false, variable, set)
+  return false, parse_code, build_call
 end
 
 # Domain.
@@ -47,19 +51,29 @@ JuMP.sense_to_set(_error::Function, ::Val{:(>)}) = CP.Strictly(MOI.GreaterThan(0
 # Default syntax: @constraint(m, [y, x] in Element(array, 2))
 JuMP.is_one_argument_constraint(::Val{:element}) = true
 
-function JuMP.parse_one_operator_constraint(errorf::Function, vectorized::Bool,
-                                            ::Val{:element}, F::Expr)
-println(F)
-println(F.head)
-println(F.args)
-
-  destination = F.args[1]
-  array = eval(F.args[2]) # TODO: does not work when the array is not 100% made explicit in the macro call.
-  index = F.args[3]
-  func = Expr(:vect, [destination, index])
-
-  return JuMP.parse_one_operator_constraint(errorf, vectorized, Val(:∈), F, CP.Element(array, 2))
-end
+# @eval JuMP begin # Not nice to do, but this ensures the function is available in the right context when called within the macro...
+#   function _jucp_build_element_constraint(
+#       errorf::Function,
+#       ::AbstractArray{<:AbstractJuMPScalar},
+#       ::AbstractArray{<:AbstractJuMPScalar},
+#   )
+#       errorf("second term must be an array of variables.")
+#   end
+# end
+#
+# function JuMP.parse_one_operator_constraint(errorf::Function, vectorized::Bool,
+#                                             ::Val{:element}, F::Expr)
+# println(F)
+# println(F.head)
+# println(F.args)
+#
+#   destination = F.args[1]
+#   array = eval(F.args[2]) # TODO: does not work when the array is not 100% made explicit in the macro call.
+#   index = F.args[3]
+#   func = Expr(:vect, [destination, index])
+#
+#   return JuMP.parse_one_operator_constraint(errorf, vectorized, Val(:∈), F, CP.Element(array, 2))
+# end
 
 # Sort.
 # Nice syntax:    @constraint(m, [y1, y2] == sort([x1, x2])) TODO
