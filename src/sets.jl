@@ -15,12 +15,20 @@ function JuMP.parse_call_constraint(errorf::Function, ::Val{:alldifferent}, F...
   end
 
   # The number of variables is not statically known, generate some code to get it.
-
+  # All the generated code will be run in JuMP's scope.
   println(F)
   println(typeof(F))
   println(length(F))
 
-  error("fuck")
+  variable, parse_code = JuMP._MA.rewrite(F)
+  set = gensym()
+  build_call = quote
+    using ConstraintProgrammingExtensions
+    set = ConstraintProgrammingExtensions.AllDifferent(length($variable))
+    build_constraint($errorf, $F, set)
+  end
+
+  return false, parse_code, build_call
 end
 
 # Domain.
