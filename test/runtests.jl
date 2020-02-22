@@ -27,6 +27,8 @@ const CP = ConstraintProgrammingExtensions
             @test_broken c.set == CP.AllDifferent(10)
             # TODO: For now, impossible to infer the size of "x..." in JuCP.
 
+            m = Model()
+            @variable(m, x[1:10])
             @constraint(m, cref, alldifferent(x[2:end]))
 
             c = JuMP.constraint_object(cref)
@@ -34,6 +36,8 @@ const CP = ConstraintProgrammingExtensions
             @test_broken c.set == CP.AllDifferent(9)
             # TODO: For now, impossible to infer the size of "x[^:end]..." in JuCP.
 
+            m = Model()
+            @variable(m, x[1:10])
             @constraint(m, cref, alldifferent(x[2:9]))
 
             c = JuMP.constraint_object(cref)
