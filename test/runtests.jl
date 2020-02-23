@@ -18,16 +18,14 @@ const CP = ConstraintProgrammingExtensions
             @test c.func == [x, y, z]
             @test c.set == CP.AllDifferent(3)
 
-            # Splatting.
-            # m = Model()
-            # @variable(m, x[1:10])
-            # @constraint(m, cref, alldifferent(x...))
-            # # TODO: what about just alldifferent(x)? what's the best syntax?
-            #
-            # c = JuMP.constraint_object(cref)
-            # @test c.func == x
-            # @tes c.set == CP.AllDifferent(10)
-            # # TODO: For now, impossible to infer the size of "x..." in JuCP.
+            # Whole array.
+            m = Model()
+            @variable(m, x[1:10])
+            @constraint(m, cref, alldifferent(x))
+
+            c = JuMP.constraint_object(cref)
+            @test c.func == x
+            @test c.set == CP.AllDifferent(10)
 
             # Portion of array (with end).
             m = Model()
