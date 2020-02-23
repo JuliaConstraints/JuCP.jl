@@ -82,6 +82,44 @@ const CP = ConstraintProgrammingExtensions
             @test c.func == x - y
             @test c.set == CP.Strictly(MOI.GreaterThan(0.0))
         end
+
+        @testset "Domain" begin
+            m = Model()
+            @variable(m, x)
+
+            @constraint(m, cref, x in [1, 2, 3])
+
+            c = JuMP.constraint_object(cref)
+            @test c.func == x
+            @test c.set == CP.Domain(Set([1, 2, 3]))
+        end
+
+        @testset "Membership" begin
+            m = Model()
+            @variable(m, w)
+            @variable(m, x)
+            @variable(m, y)
+            @variable(m, z)
+
+            @constraint(m, cref, w in [x, y, z])
+
+            c = JuMP.constraint_object(cref)
+            @test c.func == [w, x, y, z]
+            @test c.set == CP.Membership(3)
+        end
+
+        @testset "Mixed Domain and Membership" begin
+            m = Model()
+            @variable(m, x)
+            @variable(m, y)
+            @variable(m, z)
+
+            @constraint(m, cref, x in [y, z, 3])
+
+            c = JuMP.constraint_object(cref)
+            @test c.func == [x, y, z, 3]
+            @test c.set == CP.Membership(3)
+        end
     end
 
     @testset "Bridges" begin

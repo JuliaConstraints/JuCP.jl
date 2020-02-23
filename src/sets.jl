@@ -23,20 +23,19 @@ function JuMP.parse_call_constraint(errorf::Function, ::Val{:alldifferent}, F...
 end
 
 # Domain.
+# Nice syntax:    @constraint(m, x in [1, 2, 3]), like Membership
 # Default syntax: @constraint(m, x in Domain(Set(1, 2, 3)))
-# TODO: find something closer to @constraint(m, x in [1, 2]), like Membership
-# function build_constraint(_error::Function, func::AbstractJuMPScalar,
-#                           set::Domain{T}) where T
-#     return ScalarConstraint(func, set)
-# end
+function JuMP.build_constraint(_error::Function, func::AbstractJuMPScalar, values::Vector{T}) where {T <: Real}
+  return ScalarConstraint(func, CP.Domain(Set(values)))
+end
 
 # Membership.
+# Nice syntax:    @constraint(m, x in [y, z]), like Domain
 # Default syntax: @constraint(m, [x, y, z] in Membership(3))
-# TODO: find something closer to @constraint(m, x in [y, z]), like Domain
-# function build_constraint(_error::Function, func::AbstractJuMPScalar,
-#                           set::Membership) where T
-#     return ScalarConstraint(func, set)
-# end
+# Also works with mixed variables and constants: @constraint(m, x in [y, z, 1])
+function JuMP.build_constraint(_error::Function, func::AbstractJuMPScalar, values::Vector{<:JuMP.AbstractJuMPScalar})
+  return VectorConstraint(vcat([func], values), CP.Membership(length(values)))
+end
 
 # DifferentFrom.
 # Nice syntax:    @constraint(m, x != y)
