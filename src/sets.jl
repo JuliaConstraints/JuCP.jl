@@ -1,8 +1,6 @@
 # AllDifferent.
 # Nice syntax:    @constraint(m, alldifferent(x, y, z))
 # Default syntax: @constraint(m, [x, y, z] in AllDifferent(3))
-JuMP.is_one_argument_constraint(::Val{:alldifferent}) = true
-
 function JuMP.parse_call_constraint(errorf::Function, ::Val{:alldifferent}, F...)
   # All variables are explicit in the call. For instance: @constraint(m, alldifferent(x, y)).
   if length(F) > 1 && typeof(F) <: Tuple && all(p == Symbol for p in typeof(F).parameters)
@@ -56,40 +54,30 @@ JuMP.sense_to_set(_error::Function, ::Val{:(>)}) = CP.Strictly(MOI.GreaterThan(0
 
 # Element.
 # Nicer syntax:   @constraint(m, y == array[x]) TODO
-# Nice syntax:    @constraint(m, element(y, array, x)
+# Nice syntax:    @constraint(m, element(y, array, x))
 # Default syntax: @constraint(m, [y, x] in Element(array, 2))
-JuMP.is_one_argument_constraint(::Val{:element}) = true
+function JuMP.parse_call_constraint(errorf::Function, ::Val{:element}, F...)
+  if length(F) != 3
+    error("element() constraints must have three operands: the destination, the array, the index.")
+  end
 
-# @eval JuMP begin # Not nice to do, but this ensures the function is available in the right context when called within the macro...
-#   function _jucp_build_element_constraint(
-#       errorf::Function,
-#       ::AbstractArray{<:AbstractJuMPScalar},
-#       ::AbstractArray{<:AbstractJuMPScalar},
-#   )
-#       errorf("second term must be an array of variables.")
-#   end
-# end
-#
-# function JuMP.parse_one_operator_constraint(errorf::Function, vectorized::Bool,
-#                                             ::Val{:element}, F::Expr)
-# println(F)
-# println(F.head)
-# println(F.args)
-#
-#   destination = F.args[1]
-#   array = eval(F.args[2]) # TODO: does not work when the array is not 100% made explicit in the macro call.
-#   index = F.args[3]
-#   func = Expr(:vect, [destination, index])
-#
-#   return JuMP.parse_one_operator_constraint(errorf, vectorized, Val(:∈), F, CP.Element(array, 2))
-# end
+  variable, parse_code_variable = JuMP._MA.rewrite(F[1])
+  array = esc(F[2])
+  index, parse_code_index = JuMP._MA.rewrite(F[3])
+  parse_code = :($parse_code_variable; $parse_code_index)
+
+  # TODO: Likely limitation, when passing a variable as array, modifying the array in the user code will not change the array in the constraint. Problematic or not?
+  set_ = CP.Element
+  build_call = :(build_constraint($errorf, [$variable, $index], ($set_)($array, 2)))
+  return false, parse_code, build_call
+end
 
 # Sort.
-# Nice syntax:    @constraint(m, [y1, y2] == sort([x1, x2])) TODO
+# Nicer syntax:   @constraint(m, [y1, y2] == sort([x1, x2])) TODO
 # Default syntax: @constraint(m, [x1, x2, y1, y2] in Sort(2))
 
 # SortPermutation.
-# Nice syntax:    @constraint(m, [y1, y2] == sortpermutation([x1, x2])) TODO
+# Nicer syntax:   @constraint(m, [y1, y2] == sortpermutation([x1, x2])) TODO
 # Default syntax: @constraint(m, [x1, x2, z1, z2] in SortPermutation(2))
 # I.e. the sorted values are not available, and should be retrieved through Element.
 

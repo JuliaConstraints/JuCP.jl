@@ -120,6 +120,46 @@ const CP = ConstraintProgrammingExtensions
             @test c.func == [x, y, z, 3]
             @test c.set == CP.Membership(3)
         end
+
+        @testset "Element" begin
+            # # Exactly three arguments.
+            # m = Model()
+            # @variable(m, w)
+            # @variable(m, x)
+            # @variable(m, y)
+            # @variable(m, z)
+            #
+            # # Looks like a bug in Julia: exceptions are not caught when directly using the macro in the test.
+            # @test_throws ErrorException @constraint(m, element(x, y))
+            # @test_throws ErrorException @constraint(m, element(w, x, y, z))
+
+            # Constant array.
+            m = Model()
+            @variable(m, x)
+            @variable(m, y)
+
+            @constraint(m, cref, element(x, [1, 2, 3], y))
+
+            c = JuMP.constraint_object(cref)
+            @test c.func == [x, y]
+            @test c.set == CP.Element([1, 2, 3], 2)
+
+            # Variable array.
+            m = Model()
+            @variable(m, x)
+            @variable(m, y)
+
+            array = [1, 2, 3]
+            @constraint(m, cref, element(x, array, y))
+
+            c = JuMP.constraint_object(cref)
+            @test c.func == [x, y]
+            @test c.set == CP.Element(array, 2)
+
+            # TODO: Decide if this is wanted or not.
+            push!(array, 4)
+            @test_broken c.set == CP.Element(array, 2)
+        end
     end
 
     @testset "Bridges" begin
