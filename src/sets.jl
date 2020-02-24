@@ -212,8 +212,8 @@ function JuMP.parse_call_constraint(errorf::Function, ::Val{:binpacking}, F...)
     set_ = CP.BinPacking
     build_call = :(build_constraint($errorf, vcat($load, $assign, $size), ($set_)(length($load), length($assign))))
   elseif length(F) == 4
-    set_ = CP:CapacitatedBinPacking
-    build_call = :(build_constraint($errorf, vcat($load, $assign, $size, $capa), ($set_)(length($original))))
+    set_ = CP.CapacitatedBinPacking
+    build_call = :(build_constraint($errorf, vcat($load, $assign, $size, $capa), ($set_)(length($load), length($assign))))
   end
   return false, parse_code, build_call
 end
