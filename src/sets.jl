@@ -74,12 +74,85 @@ end
 
 # Sort.
 # Nicer syntax:   @constraint(m, [y1, y2] == sort([x1, x2])) TODO
+# Nice syntax:    @constraint(m, sort([x1, x2], [y1, y2]))
 # Default syntax: @constraint(m, [x1, x2, y1, y2] in Sort(2))
+function JuMP.parse_call_constraint(errorf::Function, ::Val{:sort}, F...)
+  if length(F) != 2
+    error("sort() constraints must have two operands: the array to sort, its elements in sorted order.")
+  end
+
+  original, parse_code_original = JuMP._MA.rewrite(F[1])
+  destination, parse_code_destination = JuMP._MA.rewrite(F[2])
+  parse_code = :($parse_code_original; $parse_code_destination)
+
+  # TODO: check whether original and destination have the same size?
+
+  set_ = CP.Sort
+  build_call = :(build_constraint($errorf, vcat($original, $destination), ($set_)(length($original))))
+  return false, parse_code, build_call
+end
 
 # SortPermutation.
 # Nicer syntax:   @constraint(m, [y1, y2] == sortpermutation([x1, x2])) TODO
-# Default syntax: @constraint(m, [x1, x2, z1, z2] in SortPermutation(2))
-# I.e. the sorted values are not available, and should be retrieved through Element.
+# Nice syntax:    @constraint(m, sortpermutation([x1, x2], [z1, z2]))
+# Nice syntax:    @constraint(m, sortpermutation([x1, x2], [y1, y2], [z1, z2]))
+# Default syntax: @constraint(m, [x1, x2, y1, y2, z1, z2] in SortPermutation(2))
+# I.e. the sorted values are not available with the nicer syntax, and should be retrieved through Element.
+function JuMP.parse_call_constraint(errorf::Function, ::Val{:sortpermutation}, F...)
+  if length(F) != 2 && length(F) != 3
+    error("sortpermutation() constraints must have two or three operands: the array to sort, optionally its elements in sorted order, the sorting permutation.")
+  end
+
+  # Parse the inputs.
+  original, parse_code_original = JuMP._MA.rewrite(F[1])
+  array1, parse_code_array1 = JuMP._MA.rewrite(F[2])
+  parse_code = :($parse_code_original; $parse_code_array1)
+  if length(F) == 3
+    array2, parse_code_array2 = JuMP._MA.rewrite(F[3])
+    parse_code = :($parse_code; $parse_code_array2)
+  else
+    array2 = array1
+    array1 = gensym()
+    create_array1 = quote
+      $array1 = VariableRef[]
+      for i in 1:length($original)
+        push!($array1,
+              add_variable(owner_model(first($original)),
+                           build_variable($errorf,
+                                          VariableInfo(false, NaN, false, NaN, false, NaN, false, NaN, false, false)),
+                           ""))
+      end
+    end
+    parse_code = :($parse_code; $create_array1)
+  end
+
+  # Check whether the arrays have all the same size.
+  if length(F) == 2
+    check_code = quote
+      if length($original) != length($array1)
+        error("Expected to have arrays of the same size, but the array to sort has size $(length($original)) " *
+              "and the output sorted array for the permutation has size $(length($array1)).")
+      end
+    end
+  else
+    check_code = quote
+      if length($original) != length($array1)
+        error("Expected to have arrays of the same size, but the array to sort has size $(length($original)) " *
+              "and the output sorted array has size $(length($array1)).")
+      end
+      if length($original) != length($array2)
+        error("Expected to have arrays of the same size, but the array to sort has size $(length($original)) " *
+              "and the output array for the permutation has size $(length($array2)).")
+      end
+    end
+  end
+  parse_code = :($parse_code; $check_code)
+
+  # Generate the constraint.
+  set_ = CP.SortPermutation
+  build_call = :(build_constraint($errorf, vcat($original, $array1, $array2), ($set_)(length($original))))
+  return false, parse_code, build_call
+end
 
 # BinPacking.
 # Nice syntax:    @constraint(m, [load1, load2, assigned1, assigned2] == binpacking([size1, size2])) TODO
