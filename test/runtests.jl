@@ -262,6 +262,35 @@ const CP = ConstraintProgrammingExtensions
             @test c.func[23:24] == z
             @test c.set == CP.CapacitatedBinPacking(2, 10)
         end
+
+        @testset "Reification" begin
+            # Erroneous syntax.
+            # TODO
+            # @constraint(m, x := y)
+
+            # One-variable constraint.
+            m = Model()
+            @variable(m, x)
+            @variable(m, y)
+
+            @constraint(m, cref, x := { y <= 5 })
+
+            c = JuMP.constraint_object(cref)
+            @test c.func == [x, y]
+            @test c.set == CP.ReificationSet(MOI.LessThan(5.0))
+
+            # Multiple-variable constraint.
+            m = Model()
+            @variable(m, x)
+            @variable(m, y)
+            @variable(m, z)
+
+            @constraint(m, cref, z := { alldifferent(x, y) })
+
+            c = JuMP.constraint_object(cref)
+            @test c.func == [z, x, y]
+            @test c.set == CP.ReificationSet(CP.AllDifferent(2))
+        end
     end
 
     @testset "Bridges" begin
