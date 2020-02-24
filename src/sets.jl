@@ -81,12 +81,21 @@ function JuMP.parse_call_constraint(errorf::Function, ::Val{:sort}, F...)
     error("sort() constraints must have two operands: the array to sort, its elements in sorted order.")
   end
 
+  # Parse the inputs.
   original, parse_code_original = JuMP._MA.rewrite(F[1])
   destination, parse_code_destination = JuMP._MA.rewrite(F[2])
   parse_code = :($parse_code_original; $parse_code_destination)
 
-  # TODO: check whether original and destination have the same size?
+  # Check whether the arrays have all the same size.
+  check_code = quote
+    if length($original) != length($destination)
+      error("Expected to have arrays of the same size, but the array to sort has size $(length($original)) " *
+            "and the output sorted array has size $(length($destination)).")
+    end
+  end
+  parse_code = :($parse_code; $check_code)
 
+  # Generate the constraint.
   set_ = CP.Sort
   build_call = :(build_constraint($errorf, vcat($original, $destination), ($set_)(length($original))))
   return false, parse_code, build_call
@@ -131,7 +140,7 @@ function JuMP.parse_call_constraint(errorf::Function, ::Val{:sortpermutation}, F
     check_code = quote
       if length($original) != length($array1)
         error("Expected to have arrays of the same size, but the array to sort has size $(length($original)) " *
-              "and the output sorted array for the permutation has size $(length($array1)).")
+              "and the output array for the permutation has size $(length($array1)).")
       end
     end
   else
@@ -155,12 +164,59 @@ function JuMP.parse_call_constraint(errorf::Function, ::Val{:sortpermutation}, F
 end
 
 # BinPacking.
-# Nice syntax:    @constraint(m, [load1, load2, assigned1, assigned2] == binpacking([size1, size2])) TODO
+# Nicer syntax:   @constraint(m, [load1, load2, assigned1, assigned2] == binpacking([size1, size2])) TODO
+# Nice syntax:    @constraint(m, binpacking([size1, size2], [load1, load2], [assigned1, assigned2]))
 # Default syntax: @constraint(m, [load1, load2, assigned1, assigned2, size1, size2] in BinPacking(2, 2))
 
 # CapacitatedBinPacking.
-# Nice syntax:    @constraint(m, [load1, load2, assigned1, assigned2] == binpacking([size1, size2], [capa1, capa2])) TODO
+# Nicer syntax:   @constraint(m, [load1, load2, assigned1, assigned2] == binpacking([size1, size2], [capa1, capa2])) TODO
+# Nice syntax:    @constraint(m, binpacking([size1, size2], [load1, load2], [assigned1, assigned2], [capa1, capa2]))
 # Default syntax: @constraint(m, [load1, load2, assigned1, assigned2, size1, size2, capa1, capa2] in CapacitatedBinPacking(2, 2))
+function JuMP.parse_call_constraint(errorf::Function, ::Val{:binpacking}, F...)
+  if length(F) != 3 && length(F) != 4
+    error("binpacking() constraints must have three or four operands: the bin loads, the assignment for each item, the item sizes, and optionnally the bin capacities.")
+  end
+
+  # Parse the inputs.
+  load, parse_code_load = JuMP._MA.rewrite(F[1])
+  assign, parse_code_assign = JuMP._MA.rewrite(F[2])
+  size, parse_code_size = JuMP._MA.rewrite(F[3])
+  parse_code = :($parse_code_load; $parse_code_assign; $parse_code_size)
+
+  if length(F) == 4
+    capa, parse_code_capa = JuMP._MA.rewrite(F[4])
+    parse_code = :($parse_code; $parse_code_capa)
+  end
+
+  # Check whether the arrays have all the same size.
+  check_code = quote
+    if length($assign) != length($size)
+      error("Expected to have arrays of the same size, but the item-assignment array has size $(length($assign)) " *
+            "and the item-size array has size $(length($size)).")
+    end
+  end
+  parse_code = :($parse_code; $check_code)
+
+  if length(F) == 4
+    check_code = quote
+      if length($load) != length($capa)
+        error("Expected to have arrays of the same size, but the bin-load array has size $(length($load)) " *
+              "and the bin-capacity array has size $(length($capa)).")
+      end
+    end
+    parse_code = :($parse_code; $check_code)
+  end
+
+  # Generate the constraint.
+  if length(F) == 3
+    set_ = CP.BinPacking
+    build_call = :(build_constraint($errorf, vcat($load, $assign, $size), ($set_)(length($load), length($assign))))
+  elseif length(F) == 4
+    set_ = CP:CapacitatedBinPacking
+    build_call = :(build_constraint($errorf, vcat($load, $assign, $size, $capa), ($set_)(length($original))))
+  end
+  return false, parse_code, build_call
+end
 
 # ReificationSet.
 
