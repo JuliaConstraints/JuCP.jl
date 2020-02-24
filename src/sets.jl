@@ -228,21 +228,33 @@ function _build_reified_constraint(
   return VectorConstraint([variable, jump_function(constraint)], set)
 end
 
-function JuMP.parse_one_operator_constraint(_error::Function, vectorized::Bool, ::Val{:(:=)}, lhs, rhs)
-  # Inspired by indicator constraints.
-  variable, S = _indicator_variable_set(_error, lhs)
-  if !isexpr(rhs, :braces) || length(rhs.args) != 1
-    _error("Invalid right-hand side `$(rhs)` of reified constraint. Expected constraint surrounded by `{` and `}`.")
+function JuMP.parse_constraint(_error::Function, ::Val{:(:=)}, F...)
+  if length(F) != 2
+    error("A reification constraint must have the following form: variable := { constraint }")
   end
+  lhs, rhs = F
+
+  # Parse the left-hand variable.
+  if typeof(lhs) != Symbol
+    error("A reification constraint must have the following form: variable := { constraint }. The left-hand expression is not a single variable, but rather `$(F[1])`.")
+  end
+
+  # Parse the right-hand constraint.
+  if !Meta.isexpr(rhs, :braces) || length(rhs.args) != 1
+      _error("Invalid right-hand side `$(rhs)` of reification constraint. Expected constraint surrounded by `{` and `}`.")
+  end
+
   rhs_con = rhs.args[1]
-  rhs_vectorized, rhs_parsecode, rhs_buildcall = parse_constraint(_error, rhs_con.args...)
-  if vectorized != rhs_vectorized
-    _error("Inconsistent use of `.` in symbols to indicate vectorization.")
+  rhs_vectorized, rhs_parse_code, rhs_build_call = parse_constraint(_error, Val(rhs_con.head), rhs_con.args...)
+  if rhs_vectorized
+      _error("Reified constraint cannot be vectorized.")
   end
-  if vectorized
-    buildcall = :(_build_reified_constraint.($_error, $(esc(variable)), $rhs_buildcall, $S))
-  else
-    buildcall = :(_build_reified_constraint($_error, $(esc(variable)), $rhs_buildcall, $S))
+
+  # Build the reified constraint.
+  set_ = CP.ReificationSet
+  reified_build_call = quote
+    return VectorConstraint(vcat([$(esc(lhs))], jump_function($rhs_build_call)), ($set_)(moi_set($rhs_build_call)))
   end
-  return rhs_parsecode, buildcall
+
+  return false, rhs_parse_code, reified_build_call
 end
