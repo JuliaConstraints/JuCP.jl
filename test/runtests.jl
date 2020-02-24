@@ -158,7 +158,72 @@ const CP = ConstraintProgrammingExtensions
 
             # TODO: Decide if this is wanted or not.
             push!(array, 4)
-            @test_broken c.set == CP.Element(array, 2)
+            @test c.set == CP.Element(array, 2)
+        end
+
+        @testset "Sort" begin
+            # Exactly two arguments.
+            # TODO: same as above, probably...
+
+            # All arrays must have the same size.
+            # TODO: same as above, probably...
+
+            # Variable array.
+            m = Model()
+            @variable(m, x[1:10])
+            @variable(m, y[1:10])
+
+            @constraint(m, cref, sort(x, y))
+
+            c = JuMP.constraint_object(cref)
+            @test c.func == vcat(x, y)
+            @test c.set == CP.Sort(10)
+
+            # Partly constant array.
+            m = Model()
+            @variable(m, x[1:10])
+            @variable(m, y[1:9])
+
+            @constraint(m, cref, sort(x, vcat(y, [1])))
+
+            c = JuMP.constraint_object(cref)
+            @test c.func == vcat(x, y, [1])
+            @test c.set == CP.Sort(10)
+        end
+
+        @testset "SortPermutation" begin
+            # Either two or three arguments.
+            # TODO: same as above, probably...
+
+            # All arrays must have the same size.
+            # TODO: same as above, probably...
+
+            # Two arguments: get rid of the sorted array.
+            m = Model()
+            @variable(m, x[1:10])
+            @variable(m, y[1:10])
+
+            @constraint(m, cref, sortpermutation(x, y))
+
+            c = JuMP.constraint_object(cref)
+            @test c.func[1:10] == x
+            # Ten variables in the middle with no name.
+            @test c.func[21:30] == y
+            @test c.set == CP.SortPermutation(10)
+
+            # Three arguments.
+            m = Model()
+            @variable(m, x[1:10])
+            @variable(m, y[1:10])
+            @variable(m, z[1:10])
+
+            @constraint(m, cref, sortpermutation(x, y, z))
+
+            c = JuMP.constraint_object(cref)
+            @test c.func[1:10] == x
+            @test c.func[11:20] == y
+            @test c.func[21:30] == z
+            @test c.set == CP.SortPermutation(10)
         end
     end
 
