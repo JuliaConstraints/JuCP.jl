@@ -88,7 +88,9 @@ function JuMP.rewrite_call_expression(errorf::Function, head::Val{:element}, arr
   # Add the constraint for this new variable.
   set_ = CP.Element
   idx, parse_code_index = JuMP._MA.rewrite(index)
-  build_code_con = :(println(($set_)($array, 2)); println([$var, $idx]); build_constraint($errorf, [$var, $idx], ($set_)($array, 2)))
+  build_code_con = quote
+    add_constraint($m, build_constraint($errorf, [$var, $idx], ($set_)($(esc(array)), 2)))
+  end
 
   return :($parse_code_var; $parse_code_index), build_code_con, var
 end

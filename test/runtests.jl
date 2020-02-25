@@ -133,49 +133,56 @@ const CP = ConstraintProgrammingExtensions
             # @test_throws ErrorException @constraint(m, element(x, y))
             # @test_throws ErrorException @constraint(m, element(w, x, y, z))
 
-            # Constant array.
-            m = Model()
-            @variable(m, x)
-            @variable(m, y)
+            @testset "Constant array" begin
+                m = Model()
+                @variable(m, x)
+                @variable(m, y)
 
-            @constraint(m, cref, element(x, [1, 2, 3], y))
+                @constraint(m, cref, element(x, [1, 2, 3], y))
 
-            c = JuMP.constraint_object(cref)
-            @test c.func == [x, y]
-            @test c.set == CP.Element([1, 2, 3], 2)
-
-            # Variable array.
-            m = Model()
-            @variable(m, x)
-            @variable(m, y)
-
-            array = [1, 2, 3]
-            @constraint(m, cref, element(x, array, y))
-
-            c = JuMP.constraint_object(cref)
-            @test c.func == [x, y]
-            @test c.set == CP.Element(array, 2)
-
-            # TODO: Decide if this is wanted or not.
-            push!(array, 4)
-            @test c.set == CP.Element(array, 2)
-
-            # Within another constraint.
-            m = Model()
-            @variable(m, x)
-            @variable(m, y)
-
-            array = [1, 2, 3]
-            @constraint(m, cref, x == element(array, y))
-
-            lc = JuMP.all_constraints(m)
-            @test length(lc) == 2
-            if lc[1].set == MOI.EqualTo(0.0)
-                c = lc[2]
-            else
-                c = lc[1]
+                c = JuMP.constraint_object(cref)
+                @test c.func == [x, y]
+                @test c.set == CP.Element([1, 2, 3], 2)
             end
-            @test c.set == CP.Element(array, 2)
+
+            @testset "Variable array" begin
+                m = Model()
+                @variable(m, x)
+                @variable(m, y)
+
+                array = [1, 2, 3]
+                @constraint(m, cref, element(x, array, y))
+
+                c = JuMP.constraint_object(cref)
+                @test c.func == [x, y]
+                @test c.set == CP.Element(array, 2)
+
+                # TODO: Decide if this is wanted or not.
+                push!(array, 4)
+                @test c.set == CP.Element(array, 2)
+            end
+
+            @testset "Within another constraint" begin
+                m = Model()
+                @variable(m, x)
+                @variable(m, y)
+
+                array = [1, 2, 3]
+                @constraint(m, cref, x == element(array, y))
+
+                lc = JuMP.ConstraintRef[]
+                for (f, s) in JuMP.list_of_constraint_types(m)
+                    push!(lc, JuMP.all_constraints(m, f, s)...)
+                end
+                @test length(lc) == 2
+                
+                if JuMP.constraint_object(lc[1]).set == MOI.EqualTo(0.0)
+                    c = lc[2]
+                else
+                    c = lc[1]
+                end
+                @test JuMP.constraint_object(c).set == CP.Element(array, 2)
+            end
         end
 
         @testset "Sort" begin
