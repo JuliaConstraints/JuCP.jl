@@ -54,6 +54,7 @@ JuMP.sense_to_set(_error::Function, ::Val{:(>)}) = CP.Strictly(MOI.GreaterThan(0
 
 # Element.
 # Nicer syntax:   @constraint(m, y == array[x]) TODO
+# Nicer syntax:   @constraint(m, y == element(array, x)) TODO
 # Nice syntax:    @constraint(m, element(y, array, x))
 # Default syntax: @constraint(m, [y, x] in Element(array, 2))
 function JuMP.parse_call_constraint(errorf::Function, ::Val{:element}, F...)
@@ -70,6 +71,26 @@ function JuMP.parse_call_constraint(errorf::Function, ::Val{:element}, F...)
   set_ = CP.Element
   build_call = :(build_constraint($errorf, [$variable, $index], ($set_)($array, 2)))
   return false, parse_code, build_call
+end
+
+function JuMP.rewrite_call_expression(errorf::Function, head::Val{:element}, array, index)
+  # Create the variable to replace the expression.
+  m = gensym()
+  vi = gensym()
+  var = gensym()
+
+  parse_code_var = quote
+    $m = owner_model($(esc(index)))
+    $vi = VariableInfo(false, NaN, false, NaN, false, NaN, false, NaN, false, false)
+    $var = add_variable($m, build_variable($errorf, $vi), "")
+  end
+
+  # Add the constraint for this new variable.
+  set_ = CP.Element
+  idx, parse_code_index = JuMP._MA.rewrite(index)
+  build_code_con = :(println(($set_)($array, 2)); println([$var, $idx]); build_constraint($errorf, [$var, $idx], ($set_)($array, 2)))
+
+  return :($parse_code_var; $parse_code_index), build_code_con, var
 end
 
 # Sort.
