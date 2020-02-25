@@ -159,6 +159,23 @@ const CP = ConstraintProgrammingExtensions
             # TODO: Decide if this is wanted or not.
             push!(array, 4)
             @test c.set == CP.Element(array, 2)
+
+            # Within another constraint.
+            m = Model()
+            @variable(m, x)
+            @variable(m, y)
+
+            array = [1, 2, 3]
+            @constraint(m, cref, x == element(array, y))
+
+            lc = JuMP.all_constraints(m)
+            @test length(lc) == 2
+            if lc[1].set == MOI.EqualTo(0.0)
+                c = lc[2]
+            else
+                c = lc[1]
+            end
+            @test c.set == CP.Element(array, 2)
         end
 
         @testset "Sort" begin
