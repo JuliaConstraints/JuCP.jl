@@ -1,23 +1,23 @@
 # AllDifferent.
 # Nice syntax:    @constraint(m, alldifferent(x, y, z))
 # Default syntax: @constraint(m, [x, y, z] in AllDifferent(3))
-function JuMP.parse_call_constraint(errorf::Function, ::Val{:alldifferent}, F...)
+function JuMP.parse_one_operator_constraint(_error::Function, ::Bool, ::Val{:alldifferent}, arg...)
   # All variables are explicit in the call. For instance: @constraint(m, alldifferent(x, y)).
-  if length(F) > 1 && typeof(F) <: Tuple && all(p == Symbol for p in typeof(F).parameters)
-    set = CP.AllDifferent(length(F))
-    func = Expr(:vect, F...)
+  if length(arg) > 1 && typeof(arg) <: Tuple && all(typeof(arg).parameters .== Symbol)
+    set = CP.AllDifferent(length(arg))
+    func = Expr(:vect, arg...)
 
     variable, parse_code = JuMP._MA.rewrite(func)
-    build_call = JuMP._build_call(errorf, false, variable, set)
-    return false, parse_code, build_call
+    build_call = JuMP._build_call(_error, false, variable, set)
+    return parse_code, build_call
   end
 
   # The number of variables is not statically known, generate some code to get it.
   # All the generated code will be run in JuMP's scope, hence the set_ variable.
   set_ = CP.AllDifferent
-  variable, parse_code = JuMP._MA.rewrite(F[1])
-  build_call = :(build_constraint($errorf, $variable, ($set_)(length($variable))))
-  return false, parse_code, build_call
+  variable, parse_code = JuMP._MA.rewrite(arg[1])
+  build_call = :(build_constraint($_error, $variable, ($set_)(length($variable))))
+  return parse_code, build_call
 end
 
 # Domain.
@@ -40,6 +40,10 @@ end
 # Default syntax: @constraint(m, x - y in DifferentFrom(0.0))
 JuMP.sense_to_set(_error::Function, ::Val{:(!=)}) = CP.DifferentFrom(0.0)
 
+# Strictly.
+JuMP.sense_to_set(_error::Function, ::Val{:(<)}) = CP.Strictly(MOI.LessThan(0.0))
+JuMP.sense_to_set(_error::Function, ::Val{:(>)}) = CP.Strictly(MOI.GreaterThan(0.0))
+
 # Count.
 # Nice syntax:    @constraint(m, y == count(1.0, x1, x2, x3)) TODO
 # Default syntax: @constraint(m, [y, x1, x2, x3] in Count(1.0, 3))
@@ -48,16 +52,12 @@ JuMP.sense_to_set(_error::Function, ::Val{:(!=)}) = CP.DifferentFrom(0.0)
 # Nice syntax:    @constraint(m, y == countdistinct(x1, x2, x3)) TODO
 # Default syntax: @constraint(m, [y, x1, x2, x3] in CountDistinct(3))
 
-# Strictly.
-JuMP.sense_to_set(_error::Function, ::Val{:(<)}) = CP.Strictly(MOI.LessThan(0.0))
-JuMP.sense_to_set(_error::Function, ::Val{:(>)}) = CP.Strictly(MOI.GreaterThan(0.0))
-
 # Element.
 # Nicer syntax:   @constraint(m, y == array[x]) TODO
 # Nicer syntax:   @constraint(m, y == element(array, x)) TODO
 # Nice syntax:    @constraint(m, element(y, array, x))
 # Default syntax: @constraint(m, [y, x] in Element(array, 2))
-function JuMP.parse_call_constraint(errorf::Function, ::Val{:element}, F...)
+function JuMP.parse_constraint_call(_error::Function, ::Val{:element}, F...)
   if length(F) != 3
     error("element() constraints must have three operands: the destination, the array, the index.")
   end
@@ -69,11 +69,11 @@ function JuMP.parse_call_constraint(errorf::Function, ::Val{:element}, F...)
 
   # TODO: Likely limitation, when passing a variable as array, modifying the array in the user code will not change the array in the constraint. Problematic or not?
   set_ = CP.Element
-  build_call = :(build_constraint($errorf, [$variable, $index], ($set_)($array, 2)))
+  build_call = :(build_constraint($_error, [$variable, $index], ($set_)($array, 2)))
   return false, parse_code, build_call
 end
 
-function JuMP.rewrite_call_expression(errorf::Function, head::Val{:element}, array, index)
+function JuMP.rewrite_call_expression(_error::Function, head::Val{:element}, array, index)
   # Create the variable to replace the expression.
   m = gensym()
   vi = gensym()
@@ -82,14 +82,14 @@ function JuMP.rewrite_call_expression(errorf::Function, head::Val{:element}, arr
   parse_code_var = quote
     $m = owner_model($(esc(index)))
     $vi = VariableInfo(false, NaN, false, NaN, false, NaN, false, NaN, false, false)
-    $var = add_variable($m, build_variable($errorf, $vi), "")
+    $var = add_variable($m, build_variable($_error, $vi), "")
   end
 
   # Add the constraint for this new variable.
   set_ = CP.Element
   idx, parse_code_index = JuMP._MA.rewrite(index)
   build_code_con = quote
-    add_constraint($m, build_constraint($errorf, [$var, $idx], ($set_)($(esc(array)), 2)))
+    add_constraint($m, build_constraint($_error, [$var, $idx], ($set_)($(esc(array)), 2)))
   end
 
   return :($parse_code_var; $parse_code_index), build_code_con, var
@@ -99,7 +99,7 @@ end
 # Nicer syntax:   @constraint(m, [y1, y2] == sort([x1, x2])) TODO
 # Nice syntax:    @constraint(m, sort([x1, x2], [y1, y2]))
 # Default syntax: @constraint(m, [x1, x2, y1, y2] in Sort(2))
-function JuMP.parse_call_constraint(errorf::Function, ::Val{:sort}, F...)
+function JuMP.parse_constraint_call(_error::Function, ::Val{:sort}, F...)
   if length(F) != 2
     error("sort() constraints must have two operands: the array to sort, its elements in sorted order.")
   end
@@ -120,7 +120,7 @@ function JuMP.parse_call_constraint(errorf::Function, ::Val{:sort}, F...)
 
   # Generate the constraint.
   set_ = CP.Sort
-  build_call = :(build_constraint($errorf, vcat($original, $destination), ($set_)(length($original))))
+  build_call = :(build_constraint($_error, vcat($original, $destination), ($set_)(length($original))))
   return false, parse_code, build_call
 end
 
@@ -130,7 +130,7 @@ end
 # Nice syntax:    @constraint(m, sortpermutation([x1, x2], [y1, y2], [z1, z2]))
 # Default syntax: @constraint(m, [x1, x2, y1, y2, z1, z2] in SortPermutation(2))
 # I.e. the sorted values are not available with the nicer syntax, and should be retrieved through Element.
-function JuMP.parse_call_constraint(errorf::Function, ::Val{:sortpermutation}, F...)
+function JuMP.parse_constraint_call(_error::Function, ::Val{:sortpermutation}, F...)
   if length(F) != 2 && length(F) != 3
     error("sortpermutation() constraints must have two or three operands: the array to sort, optionally its elements in sorted order, the sorting permutation.")
   end
@@ -150,7 +150,7 @@ function JuMP.parse_call_constraint(errorf::Function, ::Val{:sortpermutation}, F
       for i in 1:length($original)
         push!($array1,
               add_variable(owner_model(first($original)),
-                           build_variable($errorf,
+                           build_variable($_error,
                                           VariableInfo(false, NaN, false, NaN, false, NaN, false, NaN, false, false)),
                            ""))
       end
@@ -182,7 +182,7 @@ function JuMP.parse_call_constraint(errorf::Function, ::Val{:sortpermutation}, F
 
   # Generate the constraint.
   set_ = CP.SortPermutation
-  build_call = :(build_constraint($errorf, vcat($original, $array1, $array2), ($set_)(length($original))))
+  build_call = :(build_constraint($_error, vcat($original, $array1, $array2), ($set_)(length($original))))
   return false, parse_code, build_call
 end
 
@@ -195,7 +195,7 @@ end
 # Nicer syntax:   @constraint(m, [load1, load2, assigned1, assigned2] == binpacking([size1, size2], [capa1, capa2])) TODO
 # Nice syntax:    @constraint(m, binpacking([size1, size2], [load1, load2], [assigned1, assigned2], [capa1, capa2]))
 # Default syntax: @constraint(m, [load1, load2, assigned1, assigned2, size1, size2, capa1, capa2] in CapacitatedBinPacking(2, 2))
-function JuMP.parse_call_constraint(errorf::Function, ::Val{:binpacking}, F...)
+function JuMP.parse_constraint_call(_error::Function, ::Val{:binpacking}, F...)
   if length(F) != 3 && length(F) != 4
     error("binpacking() constraints must have three or four operands: the bin loads, the assignment for each item, the item sizes, and optionnally the bin capacities.")
   end
@@ -233,10 +233,10 @@ function JuMP.parse_call_constraint(errorf::Function, ::Val{:binpacking}, F...)
   # Generate the constraint.
   if length(F) == 3
     set_ = CP.BinPacking
-    build_call = :(build_constraint($errorf, vcat($load, $assign, $size), ($set_)(length($load), length($assign))))
+    build_call = :(build_constraint($_error, vcat($load, $assign, $size), ($set_)(length($load), length($assign))))
   elseif length(F) == 4
     set_ = CP.CapacitatedBinPacking
-    build_call = :(build_constraint($errorf, vcat($load, $assign, $size, $capa), ($set_)(length($load), length($assign))))
+    build_call = :(build_constraint($_error, vcat($load, $assign, $size, $capa), ($set_)(length($load), length($assign))))
   end
   return false, parse_code, build_call
 end

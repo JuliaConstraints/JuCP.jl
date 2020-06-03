@@ -47,42 +47,6 @@ const CP = ConstraintProgrammingExtensions
             @test c.set == CP.AllDifferent(8) # Could do something about it to compute the dimension of the set, but probably not scalable for the other cases.
         end
 
-        @testset "DifferentFrom" begin
-            m = Model()
-            @variable(m, x)
-            @variable(m, y)
-
-            @constraint(m, cref, x != y)
-
-            c = JuMP.constraint_object(cref)
-            @test c.func == x - y
-            @test c.set == CP.DifferentFrom(0.0)
-        end
-
-        @testset "Strictly(LessThan)" begin
-            m = Model()
-            @variable(m, x)
-            @variable(m, y)
-
-            @constraint(m, cref, x < y)
-
-            c = JuMP.constraint_object(cref)
-            @test c.func == x - y
-            @test c.set == CP.Strictly(MOI.LessThan(0.0))
-        end
-
-        @testset "Strictly(GreaterThan)" begin
-            m = Model()
-            @variable(m, x)
-            @variable(m, y)
-
-            @constraint(m, cref, x > y)
-
-            c = JuMP.constraint_object(cref)
-            @test c.func == x - y
-            @test c.set == CP.Strictly(MOI.GreaterThan(0.0))
-        end
-
         @testset "Domain" begin
             m = Model()
             @variable(m, x)
@@ -119,6 +83,42 @@ const CP = ConstraintProgrammingExtensions
             c = JuMP.constraint_object(cref)
             @test c.func == [x, y, z, 3]
             @test c.set == CP.Membership(3)
+        end
+
+        @testset "DifferentFrom" begin
+            m = Model()
+            @variable(m, x)
+            @variable(m, y)
+
+            @constraint(m, cref, x != y)
+
+            c = JuMP.constraint_object(cref)
+            @test c.func == x - y
+            @test c.set == CP.DifferentFrom(0.0)
+        end
+
+        @testset "Strictly(LessThan)" begin
+            m = Model()
+            @variable(m, x)
+            @variable(m, y)
+
+            @constraint(m, cref, x < y)
+
+            c = JuMP.constraint_object(cref)
+            @test c.func == x - y
+            @test c.set == CP.Strictly(MOI.LessThan(0.0))
+        end
+
+        @testset "Strictly(GreaterThan)" begin
+            m = Model()
+            @variable(m, x)
+            @variable(m, y)
+
+            @constraint(m, cref, x > y)
+
+            c = JuMP.constraint_object(cref)
+            @test c.func == x - y
+            @test c.set == CP.Strictly(MOI.GreaterThan(0.0))
         end
 
         @testset "Element" begin
@@ -175,7 +175,7 @@ const CP = ConstraintProgrammingExtensions
                     push!(lc, JuMP.all_constraints(m, f, s)...)
                 end
                 @test length(lc) == 2
-                
+
                 if JuMP.constraint_object(lc[1]).set == MOI.EqualTo(0.0)
                     c = lc[2]
                 else
