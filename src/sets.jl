@@ -62,9 +62,9 @@ function JuMP.parse_one_operator_constraint(_error::Function, ::Bool, ::Val{:ele
   # TODO: Likely limitation, when passing a variable as array, modifying the array in the user code will not change the array in the constraint. Problematic or not?
   set_ = CP.Element
   build_call = :(build_constraint($_error, [$variable, $index], ($set_)($array, 2)))
-  return false, parse_code, build_call
+  return parse_code, build_call
 end
-#
+
 # function JuMP.rewrite_call_expression(_error::Function, head::Val{:element}, array, index)
 #   # Create the variable to replace the expression.
 #   m = gensym()
@@ -279,5 +279,5 @@ function JuMP.parse_constraint(_error::Function, ::Val{:(:=)}, arg...)
     return VectorConstraint(vcat([$(esc(lhs))], jump_function($rhs_build_call)), ($set_)(moi_set($rhs_build_call)))
   end
 
-  return false, rhs_parse_code, reified_build_call
+  return rhs_parse_code, reified_build_call
 end
