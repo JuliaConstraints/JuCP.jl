@@ -250,71 +250,71 @@ const CP = ConstraintProgrammingExtensions
             @test c.set == CP.SortPermutation(10)
         end
 
-        @testset "BinPacking and CapacitatedBinPacking" begin
-            # Either three or four arguments.
-            # TODO: same as above, probably...
-
-            # Arrays must have the same size (items and bins).
-            # TODO: same as above, probably...
-
-            # Three arguments: ten items (fixed sizes), two bins.
-            m = Model()
-            @variable(m, x[1:2])
-            @variable(m, y[1:10])
-
-            @constraint(m, cref, binpacking(x, y, collect(1:10)))
-
-            c = JuMP.constraint_object(cref)
-            @test c.func[1:2] == convert(Vector{GenericAffExpr{Float64, VariableRef}}, x)
-            @test c.func[3:12] == convert(Vector{GenericAffExpr{Float64, VariableRef}}, y)
-            @test c.func[13:22] == convert(Vector{GenericAffExpr{Float64, VariableRef}}, collect(1:10))
-            @test c.set == CP.BinPacking(2, 10)
-
-            # Four arguments: ten items, two bins.
-            m = Model()
-            @variable(m, w[1:2])
-            @variable(m, x[1:10])
-            @variable(m, y[1:10])
-            @variable(m, z[1:2])
-
-            @constraint(m, cref, binpacking(w, x, y, z))
-
-            c = JuMP.constraint_object(cref)
-            @test c.func[1:2] == w
-            @test c.func[3:12] == x
-            @test c.func[13:22] == y
-            @test c.func[23:24] == z
-            @test c.set == CP.CapacitatedBinPacking(2, 10)
-        end
-
-        @testset "Reification" begin
-            # Erroneous syntax.
-            # TODO
-            # @constraint(m, x := y)
-
-            # One-variable constraint.
-            m = Model()
-            @variable(m, x)
-            @variable(m, y)
-
-            @constraint(m, cref, x := { y <= 5 })
-
-            c = JuMP.constraint_object(cref)
-            @test c.func == [x, y]
-            @test c.set == CP.ReificationSet(MOI.LessThan(5.0))
-
-            # Multiple-variable constraint.
-            m = Model()
-            @variable(m, x)
-            @variable(m, y)
-            @variable(m, z)
-
-            @constraint(m, cref, z := { alldifferent(x, y) })
-
-            c = JuMP.constraint_object(cref)
-            @test c.func == [z, x, y]
-            @test c.set == CP.ReificationSet(CP.AllDifferent(2))
-        end
+        # @testset "BinPacking and CapacitatedBinPacking" begin
+        #     # Either three or four arguments.
+        #     # TODO: same as above, probably...
+        #
+        #     # Arrays must have the same size (items and bins).
+        #     # TODO: same as above, probably...
+        #
+        #     # Three arguments: ten items (fixed sizes), two bins.
+        #     m = Model()
+        #     @variable(m, x[1:2])
+        #     @variable(m, y[1:10])
+        #
+        #     @constraint(m, cref, binpacking(x, y, collect(1:10)))
+        #
+        #     c = JuMP.constraint_object(cref)
+        #     @test c.func[1:2] == convert(Vector{GenericAffExpr{Float64, VariableRef}}, x)
+        #     @test c.func[3:12] == convert(Vector{GenericAffExpr{Float64, VariableRef}}, y)
+        #     @test c.func[13:22] == convert(Vector{GenericAffExpr{Float64, VariableRef}}, collect(1:10))
+        #     @test c.set == CP.BinPacking(2, 10)
+        #
+        #     # Four arguments: ten items, two bins.
+        #     m = Model()
+        #     @variable(m, w[1:2])
+        #     @variable(m, x[1:10])
+        #     @variable(m, y[1:10])
+        #     @variable(m, z[1:2])
+        #
+        #     @constraint(m, cref, binpacking(w, x, y, z))
+        #
+        #     c = JuMP.constraint_object(cref)
+        #     @test c.func[1:2] == w
+        #     @test c.func[3:12] == x
+        #     @test c.func[13:22] == y
+        #     @test c.func[23:24] == z
+        #     @test c.set == CP.CapacitatedBinPacking(2, 10)
+        # end
+        #
+        # @testset "Reification" begin
+        #     # Erroneous syntax.
+        #     # TODO
+        #     # @constraint(m, x := y)
+        #
+        #     # One-variable constraint.
+        #     m = Model()
+        #     @variable(m, x)
+        #     @variable(m, y)
+        #
+        #     @constraint(m, cref, x := { y <= 5 })
+        #
+        #     c = JuMP.constraint_object(cref)
+        #     @test c.func == [x, y]
+        #     @test c.set == CP.ReificationSet(MOI.LessThan(5.0))
+        #
+        #     # Multiple-variable constraint.
+        #     m = Model()
+        #     @variable(m, x)
+        #     @variable(m, y)
+        #     @variable(m, z)
+        #
+        #     @constraint(m, cref, z := { alldifferent(x, y) })
+        #
+        #     c = JuMP.constraint_object(cref)
+        #     @test c.func == [z, x, y]
+        #     @test c.set == CP.ReificationSet(CP.AllDifferent(2))
+        # end
     end
 
     @testset "Bridges" begin
