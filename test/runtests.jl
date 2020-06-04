@@ -126,8 +126,8 @@ end
             @test c.set == CP.Strictly(MOI.GreaterThan(0.0))
         end
 
-        @testset "Element" begin
-            @testset "Error case: not three arguments as a global constraint" begin
+        @testset "Element (global constraint)" begin
+            @testset "Error case: not three arguments" begin
                 m = Model()
                 @variable(m, w)
                 @variable(m, x)
@@ -166,7 +166,9 @@ end
                 push!(array, 4)
                 @test c.set == CP.Element(array, 2)
             end
+        end
 
+        @testset "Element (expression)" begin
             # @testset "Within another constraint" begin
             #     m = Model()
             #     @variable(m, x)
@@ -255,43 +257,77 @@ end
             @test c.set == CP.SortPermutation(10)
         end
 
-        # @testset "BinPacking and CapacitatedBinPacking" begin
-        #     # Either three or four arguments.
-        #     # TODO: same as above, probably...
-        #
-        #     # Arrays must have the same size (items and bins).
-        #     # TODO: same as above, probably...
-        #
-        #     # Three arguments: ten items (fixed sizes), two bins.
-        #     m = Model()
-        #     @variable(m, x[1:2])
-        #     @variable(m, y[1:10])
-        #
-        #     @constraint(m, cref, binpacking(x, y, collect(1:10)))
-        #
-        #     c = JuMP.constraint_object(cref)
-        #     @test c.func[1:2] == convert(Vector{GenericAffExpr{Float64, VariableRef}}, x)
-        #     @test c.func[3:12] == convert(Vector{GenericAffExpr{Float64, VariableRef}}, y)
-        #     @test c.func[13:22] == convert(Vector{GenericAffExpr{Float64, VariableRef}}, collect(1:10))
-        #     @test c.set == CP.BinPacking(2, 10)
-        #
-        #     # Four arguments: ten items, two bins.
-        #     m = Model()
-        #     @variable(m, w[1:2])
-        #     @variable(m, x[1:10])
-        #     @variable(m, y[1:10])
-        #     @variable(m, z[1:2])
-        #
-        #     @constraint(m, cref, binpacking(w, x, y, z))
-        #
-        #     c = JuMP.constraint_object(cref)
-        #     @test c.func[1:2] == w
-        #     @test c.func[3:12] == x
-        #     @test c.func[13:22] == y
-        #     @test c.func[23:24] == z
-        #     @test c.set == CP.CapacitatedBinPacking(2, 10)
-        # end
-        #
+        @testset "BinPacking and CapacitatedBinPacking (global constraint)" begin
+            # Either three or four arguments.
+            # TODO: same as above, probably...
+
+            # Arrays must have the same size (items and bins).
+            # TODO: same as above, probably...
+
+            @testset "Uncapacitated" begin
+                # Three arguments: ten items (fixed sizes), two bins.
+                m = Model()
+                @variable(m, x[1:2])
+                @variable(m, y[1:10])
+
+                @constraint(m, cref, binpacking(x, y, collect(1:10)))
+
+                c = JuMP.constraint_object(cref)
+                @test c.func[1:2] == convert(Vector{GenericAffExpr{Float64, VariableRef}}, x)
+                @test c.func[3:12] == convert(Vector{GenericAffExpr{Float64, VariableRef}}, y)
+                @test c.func[13:22] == convert(Vector{GenericAffExpr{Float64, VariableRef}}, collect(1:10))
+                @test c.set == CP.BinPacking(2, 10)
+
+                # Three arguments: ten items (variable sizes), two bins.
+                m = Model()
+                @variable(m, x[1:2])
+                @variable(m, y[1:10])
+                @variable(m, z[1:10])
+
+                @constraint(m, cref, binpacking(x, y, z))
+
+                c = JuMP.constraint_object(cref)
+                @test c.func[1:2] == x
+                @test c.func[3:12] == y
+                @test c.func[13:22] == z
+                @test c.set == CP.BinPacking(2, 10)
+            end
+
+            @testset "Capacitated" begin
+                # Four arguments: ten items (fixed sizes), two bins.
+                m = Model()
+                @variable(m, x[1:2])
+                @variable(m, y[1:10])
+                @variable(m, z[1:2])
+
+                @constraint(m, cref, binpacking(x, y, collect(1:10), z))
+
+                c = JuMP.constraint_object(cref)
+                @test c.func[1:2] == convert(Vector{GenericAffExpr{Float64, VariableRef}}, x)
+                @test c.func[3:12] == convert(Vector{GenericAffExpr{Float64, VariableRef}}, y)
+                @test c.func[13:22] == convert(Vector{GenericAffExpr{Float64, VariableRef}}, collect(1:10))
+                @test c.func[23:24] == convert(Vector{GenericAffExpr{Float64, VariableRef}}, z)
+                @test c.set == CP.CapacitatedBinPacking(2, 10)
+
+                # Four arguments: ten items, two bins.
+                # Used to trigger a very specific bug, where JuMP.parse_ternary_constraint was called.
+                m = Model()
+                @variable(m, w[1:2])
+                @variable(m, x[1:10])
+                @variable(m, y[1:10])
+                @variable(m, z[1:2])
+
+                @constraint(m, cref, binpacking(w, x, y, z))
+
+                c = JuMP.constraint_object(cref)
+                @test c.func[1:2] == w
+                @test c.func[3:12] == x
+                @test c.func[13:22] == y
+                @test c.func[23:24] == z
+                @test c.set == CP.CapacitatedBinPacking(2, 10)
+            end
+        end
+
         # @testset "Reification" begin
         #     # Erroneous syntax.
         #     # TODO

@@ -233,6 +233,19 @@ function JuMP.parse_one_operator_constraint(_error::Function, ::Bool, ::Val{:bin
   return parse_code, build_call
 end
 
+function JuMP.parse_ternary_constraint(_error::Function, vectorized::Bool, a, b::Val, c, d::Val, e)
+  # Hacky as hell... 
+  b_unboxed = typeof(b).parameters[1]
+  d_unboxed = typeof(d).parameters[1]
+  if applicable(JuMP.parse_one_operator_constraint, _error, vectorized, Val(a), b_unboxed, c, d_unboxed, e)
+    parse_code, build_call = JuMP.parse_one_operator_constraint(_error, vectorized, Val(a), b_unboxed, c, d_unboxed, e)
+    return parse_code, :(), :(), build_call
+  else
+    # If there is no corresponding method, return the standard error from JuMP.
+    JuMP.parse_ternary_constraint(_error, nothing)
+  end
+end
+
 # Count.
 # Nice syntax:    @constraint(m, y == count(1.0, x1, x2, x3)) TODO
 # Default syntax: @constraint(m, [y, x1, x2, x3] in Count(1.0, 3))
