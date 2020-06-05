@@ -40,7 +40,6 @@ end
             c = JuMP.constraint_object(cref)
             @test c.func == x[2:end]
             @test c.set == CP.AllDifferent(9)
-            # TODO: For now, impossible to infer the size of "x[^:end]..." in JuCP.
 
             # Portion of array.
             m = Model()
@@ -286,11 +285,23 @@ end
         end
 
         @testset "BinPacking and CapacitatedBinPacking (global constraint)" begin
-            # Either three or four arguments.
-            # TODO: same as above, probably...
+            @testset "Error cases" begin
+                m = Model()
+                @variable(m, v[1:2])
+                @variable(m, w[1:2])
+                @variable(m, x[1:10])
+                @variable(m, y[1:10])
+                @variable(m, z[1:2])
 
-            # Arrays must have the same size (items and bins).
-            # TODO: same as above, probably...
+                # Either three or four arguments.
+                @test_macro_throws ErrorException @constraint(m, binpacking(x, y))
+                @test_macro_throws ErrorException @constraint(m, binpacking(v, w, x, y, z))
+
+                # Arrays must have the same size (items and bins).
+                @test_macro_throws ErrorException @constraint(m, binpacking(x, y, z[1:5]))
+                @test_macro_throws ErrorException @constraint(m, binpacking(x, y, z[1:2])) # Assignments: number of bins, instead of number of items.
+                @test_macro_throws ErrorException @constraint(m, binpacking(w, x, y, z[1:1])) # One capacity for two bins.
+            end
 
             @testset "Uncapacitated" begin
                 # Three arguments: ten items (fixed sizes), two bins.
