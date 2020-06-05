@@ -242,6 +242,7 @@ function JuMP.parse_ternary_constraint(_error::Function, vectorized::Bool, a, b:
 end
 
 # Count.
+# Nicer syntax:   @constraint(m, y == count([x1, x2, x3] .== 1.0)) TODO
 # Nice syntax:    @constraint(m, y == count(1.0, x1, x2, x3)) TODO
 # Default syntax: @constraint(m, [y, x1, x2, x3] in Count(1.0, 3))
 
