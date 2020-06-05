@@ -215,17 +215,19 @@ end
         end
 
         @testset "Sort" begin
-            # Exactly two arguments.
-            # TODO: same as above, probably...
-
-            # All arrays must have the same size.
-            # TODO: same as above, probably...
-
-            # Variable array.
             m = Model()
             @variable(m, x[1:10])
             @variable(m, y[1:10])
+            @variable(m, z[1:10])
 
+            # Exactly two arguments.
+            @test_macro_throws ErrorException @constraint(m, sort(x))
+            @test_macro_throws ErrorException @constraint(m, sort(x, y, z))
+
+            # All arrays must have the same size.
+            @test_macro_throws ErrorException @constraint(m, sort(x, y[1:5]))
+
+            # Variable array.
             @constraint(m, cref, sort(x, y))
 
             c = JuMP.constraint_object(cref)
@@ -245,17 +247,21 @@ end
         end
 
         @testset "SortPermutation" begin
-            # Either two or three arguments.
-            # TODO: same as above, probably...
-
-            # All arrays must have the same size.
-            # TODO: same as above, probably...
-
-            # Two arguments: get rid of the sorted array.
             m = Model()
+            @variable(m, w[1:10])
             @variable(m, x[1:10])
             @variable(m, y[1:10])
+            @variable(m, z[1:10])
 
+            # Exactly two arguments.
+            @test_macro_throws ErrorException @constraint(m, sortpermutation(x))
+            @test_macro_throws ErrorException @constraint(m, sortpermutation(w, x, y, z))
+
+            # All arrays must have the same size.
+            @test_macro_throws ErrorException @constraint(m, sortpermutation(x, y[1:5]))
+            @test_macro_throws ErrorException @constraint(m, sortpermutation(x, y[1:5], z))
+
+            # Two arguments: get rid of the sorted array.
             @constraint(m, cref, sortpermutation(x, y))
 
             c = JuMP.constraint_object(cref)
