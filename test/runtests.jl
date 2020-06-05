@@ -169,27 +169,49 @@ end
         end
 
         @testset "Element (expression)" begin
-            # @testset "Within another constraint" begin
-            #     m = Model()
-            #     @variable(m, x)
-            #     @variable(m, y)
-            #
-            #     array = [1, 2, 3]
-            #     @constraint(m, cref, x == element(array, y))
-            #
-            #     lc = JuMP.ConstraintRef[]
-            #     for (f, s) in JuMP.list_of_constraint_types(m)
-            #         push!(lc, JuMP.all_constraints(m, f, s)...)
-            #     end
-            #     @test length(lc) == 2
-            #
-            #     if JuMP.constraint_object(lc[1]).set == MOI.EqualTo(0.0)
-            #         c = lc[2]
-            #     else
-            #         c = lc[1]
-            #     end
-            #     @test JuMP.constraint_object(c).set == CP.Element(array, 2)
-            # end
+            @testset "element() function call" begin
+                m = Model()
+                @variable(m, x)
+                @variable(m, y)
+
+                array = [1, 2, 3]
+                @constraint(m, cref, x == element(array, y))
+
+                lc = JuMP.ConstraintRef[]
+                for (f, s) in JuMP.list_of_constraint_types(m)
+                    push!(lc, JuMP.all_constraints(m, f, s)...)
+                end
+                @test length(lc) == 2
+
+                if JuMP.constraint_object(lc[1]).set == MOI.EqualTo(0.0)
+                    c = lc[2]
+                else
+                    c = lc[1]
+                end
+                @test JuMP.constraint_object(c).set == CP.Element(array, 2)
+            end
+
+            @testset "Array indexing" begin
+                m = Model()
+                @variable(m, x)
+                @variable(m, y)
+
+                array = [1, 2, 3]
+                @constraint(m, cref, x == array[y]) # Only difference with the previous test set.
+
+                lc = JuMP.ConstraintRef[]
+                for (f, s) in JuMP.list_of_constraint_types(m)
+                    push!(lc, JuMP.all_constraints(m, f, s)...)
+                end
+                @test length(lc) == 2
+
+                if JuMP.constraint_object(lc[1]).set == MOI.EqualTo(0.0)
+                    c = lc[2]
+                else
+                    c = lc[1]
+                end
+                @test JuMP.constraint_object(c).set == CP.Element(array, 2)
+            end
         end
 
         @testset "Sort" begin

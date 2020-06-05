@@ -45,18 +45,18 @@ JuMP.sense_to_set(_error::Function, ::Val{:(<)}) = CP.Strictly(MOI.LessThan(0.0)
 JuMP.sense_to_set(_error::Function, ::Val{:(>)}) = CP.Strictly(MOI.GreaterThan(0.0))
 
 # Element.
-# Nicer syntax:   @constraint(m, y == array[x]) TODO
-# Nicer syntax:   @constraint(m, y == element(array, x)) TODO
+# Nicer syntax:   @constraint(m, y == array[x])
+# Nicer syntax:   @constraint(m, y == element(array, x))
 # Nice syntax:    @constraint(m, element(y, array, x))
 # Default syntax: @constraint(m, [y, x] in Element(array, 2))
-function JuMP.parse_one_operator_constraint(_error::Function, ::Bool, ::Val{:element}, arg...)
-  if length(arg) != 3
+function JuMP.parse_one_operator_constraint(_error::Function, ::Bool, ::Val{:element}, args...)
+  if length(args) != 3
     error("element() constraints must have three operands: the destination, the array, the index.")
   end
 
-  variable, parse_code_variable = JuMP._MA.rewrite(arg[1])
-  array = esc(arg[2])
-  index, parse_code_index = JuMP._MA.rewrite(arg[3])
+  variable, parse_code_variable = JuMP._MA.rewrite(args[1])
+  array = esc(args[2])
+  index, parse_code_index = JuMP._MA.rewrite(args[3])
   parse_code = :($parse_code_variable; $parse_code_index)
 
   # TODO: Likely limitation, when passing a variable as array, modifying the array in the user code will not change the array in the constraint. Problematic or not?
@@ -65,27 +65,22 @@ function JuMP.parse_one_operator_constraint(_error::Function, ::Bool, ::Val{:ele
   return parse_code, build_call
 end
 
-# function JuMP.rewrite_call_expression(_error::Function, head::Val{:element}, array, index)
-#   # Create the variable to replace the expression.
-#   m = gensym()
-#   vi = gensym()
-#   var = gensym()
-#
-#   parse_code_var = quote
-#     $m = owner_model($(esc(index)))
-#     $vi = VariableInfo(false, NaN, false, NaN, false, NaN, false, NaN, false, false)
-#     $var = add_variable($m, build_variable($_error, $vi), "")
-#   end
-#
-#   # Add the constraint for this new variable.
-#   set_ = CP.Element
-#   idx, parse_code_index = JuMP._MA.rewrite(index)
-#   build_code_con = quote
-#     add_constraint($m, build_constraint($_error, [$var, $idx], ($set_)($(esc(array)), 2)))
-#   end
-#
-#   return :($parse_code_var; $parse_code_index), build_code_con, var
-# end
+function JuMP._rewrite_expr(_error::Function, ::Val{:call}, op::Val{:element}, args...)
+  # Switch to getindex to retrieve the right expression.
+  if length(args) != 2
+    error("element() expressions must have two operands: the array, the index.")
+  end
+
+  return :(), :(), quote; $(args[1])[$(args[2])]; end
+end
+
+function Base.getindex(v::Vector{T}, i::VariableRef) where T
+  # Always returns a JuMP expression.
+  m = owner_model(i)
+  x = @variable(m)
+  @constraint(m, element(x, v, i))
+  return x
+end
 
 # Sort.
 # Nicer syntax:   @constraint(m, [y1, y2] == sort([x1, x2])) TODO
@@ -234,7 +229,7 @@ function JuMP.parse_one_operator_constraint(_error::Function, ::Bool, ::Val{:bin
 end
 
 function JuMP.parse_ternary_constraint(_error::Function, vectorized::Bool, a, b::Val, c, d::Val, e)
-  # Hacky as hell... 
+  # Hacky as hell...
   b_unboxed = typeof(b).parameters[1]
   d_unboxed = typeof(d).parameters[1]
   if applicable(JuMP.parse_one_operator_constraint, _error, vectorized, Val(a), b_unboxed, c, d_unboxed, e)
